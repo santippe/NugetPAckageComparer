@@ -27,7 +27,7 @@ namespace NugetPacketAnalyzer
 
                 foreach (string projFile in projFiles)
                 {
-                    var tmpList = GetPackagesInfo(await File.ReadAllTextAsync(projFiles.FirstOrDefault()),
+                    var tmpList = GetPackagesInfo(await File.ReadAllTextAsync(projFile),
                         Path.GetFileNameWithoutExtension(projFile));
                     list.AddRange(tmpList);
                 }
