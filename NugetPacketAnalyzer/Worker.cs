@@ -1,4 +1,9 @@
 using System.Xml;
+using NuGet.Common;
+using NuGet.Configuration;
+using NuGet.Protocol;
+using NuGet.Protocol.Core.Types;
+using NuGet.Versioning;
 
 namespace NugetPacketAnalyzer
 {
@@ -6,11 +11,13 @@ namespace NugetPacketAnalyzer
     {
         private readonly ILogger<Worker> _logger;
         private readonly IConfiguration _conf;
+        private readonly PackageMetadataResource _packageMetadataResource;
 
         public Worker(ILogger<Worker> logger, IConfiguration configuration)
         {
             _logger = logger;
             _conf = configuration;
+            _packageMetadataResource = GetPackageMetadataResource().GetAwaiter().GetResult();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -39,7 +46,8 @@ namespace NugetPacketAnalyzer
 
                 foreach (var elem in list)
                 {
-                    Console.WriteLine($"{elem.Item1} - {elem.Item2}");
+                    var lastVersion = await GetLastNugetPackageVersion(elem.Item1);
+                    Console.WriteLine($"{elem.Item1} - {elem.Item2} - {lastVersion}");
                 }
 
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
@@ -58,6 +66,35 @@ namespace NugetPacketAnalyzer
                 XmlAttribute version = packageReference.Attributes["Version"];
                 yield return (include?.Value, version?.Value, projName);
             }
+        }
+
+        private async Task<string> GetLastNugetPackageVersion(string packageName)
+        {
+            IEnumerable<IPackageSearchMetadata> packageMetadata = await _packageMetadataResource.GetMetadataAsync(packageName, includePrerelease: false, includeUnlisted: false, new SourceCacheContext(), NullLogger.Instance, CancellationToken.None);
+
+            var lastVersion = packageMetadata.OrderByDescending(x => x.Identity.Version)
+                .FirstOrDefault()?
+                .Identity?.Version?.ToString();
+
+            return lastVersion;
+
+            //foreach (IPackageSearchMetadata metadata in packageMetadata)
+            //{
+            //    Console.WriteLine($"Package Id: {metadata.Identity.Id}");
+            //    Console.WriteLine($"Version: {metadata.Identity.Version}");
+            //    Console.WriteLine($"Description: {metadata.Description}");
+            //    Console.WriteLine($"Authors: {metadata.Authors}");
+            //    Console.WriteLine($"Total Downloads: {metadata.DownloadCount}");
+            //    Console.WriteLine($"Published Date: {metadata.Published}");
+            //    Console.WriteLine($"Project URL: {metadata.ProjectUrl}");
+            //}
+        }
+
+        static async Task<PackageMetadataResource> GetPackageMetadataResource()
+        {
+            SourceRepository sourceRepository = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json");
+            PackageMetadataResource resource = await sourceRepository.GetResourceAsync<PackageMetadataResource>();
+            return resource;
         }
 
         class MyEqualityComparer : IEqualityComparer<(string, string, string)>
