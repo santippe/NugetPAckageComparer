@@ -33,7 +33,9 @@ namespace NugetPacketAnalyzer
                 }
 
                 var comparer = new MyEqualityComparer();
-                list = list.Distinct(comparer).ToList();
+                list = list.Distinct(comparer)
+                    .OrderBy(x => x.Item1)
+                    .ToList();
 
                 foreach (var elem in list)
                 {
@@ -58,7 +60,7 @@ namespace NugetPacketAnalyzer
             }
         }
 
-        class MyEqualityComparer : IEqualityComparer<(string, string,string)>
+        class MyEqualityComparer : IEqualityComparer<(string, string, string)>
         {
             public bool Equals((string, string, string) x, (string, string, string) y)
             {
