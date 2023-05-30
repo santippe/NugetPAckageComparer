@@ -39,15 +39,27 @@ namespace NugetPacketAnalyzer
                     list.AddRange(tmpList);
                 }
 
-                var comparer = new MyEqualityComparer();
-                list = list.Distinct(comparer)
-                    .OrderBy(x => x.Item1)
-                    .ToList();
+                //var comparer = new MyEqualityComparer();
+                //list = list.Distinct(comparer)
+                //    .OrderBy(x => x.Item1)
+                //    .ToList();
 
-                foreach (var elem in list)
+                var listGrouped = list.GroupBy(x => x.Item1).ToList();
+
+                foreach (var elemG in listGrouped)
                 {
-                    var lastVersion = await GetLastNugetPackageVersion(elem.Item1);
-                    Console.WriteLine($"{elem.Item1} - {elem.Item2} - {lastVersion}");
+                    var elem = elemG.FirstOrDefault();
+                    var lastVersion = await GetLastNugetPackageVersion(elemG.Key);
+                    Console.WriteLine($"{elemG.Key} - {elem.Item2} - {lastVersion}");
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    var counter = 0;
+                    foreach (var proj in elemG)
+                    {
+                        Console.WriteLine($"{proj.Item3} - {proj.Item2}");
+                        counter++;
+                        Console.ForegroundColor = counter % 2 == 0 ? ConsoleColor.Green : ConsoleColor.DarkGreen;
+                    }
+                    Console.ForegroundColor = ConsoleColor.White;
                 }
 
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
@@ -107,9 +119,9 @@ namespace NugetPacketAnalyzer
             public int GetHashCode((string, string, string) obj)
             {
                 int hash = 17;
-                hash = hash * 23 + obj.Item1.GetHashCode();
-                hash = hash * 23 + obj.Item2.GetHashCode();
-                //hash = hash * 23 + obj.Item3.GetHashCode();
+                hash = hash * 23 + obj.Item1?.GetHashCode() ?? 0;
+                hash = hash * 23 + obj.Item2?.GetHashCode() ?? 0;
+                hash = hash * 23 + obj.Item3?.GetHashCode() ?? 0;
                 return hash;
             }
         }
