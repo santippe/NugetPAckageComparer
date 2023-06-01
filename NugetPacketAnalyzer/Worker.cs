@@ -1,3 +1,4 @@
+using System;
 using System.Xml;
 using NuGet.Common;
 using NuGet.Configuration;
@@ -36,7 +37,8 @@ namespace NugetPacketAnalyzer
                 {
                     var tmpList = GetPackagesInfo(await File.ReadAllTextAsync(projFile),
                         Path.GetFileNameWithoutExtension(projFile))
-                        .Where(x => x.Item1?.Contains("icrosoft") ?? false || (x.Item1?.Contains("ystem") ?? false));
+                        .Where(x => (x.Item1?.Contains("icrosoft") ?? false || (x.Item1?.Contains("ystem") ?? false))
+                        );
                     list.AddRange(tmpList);
                 }
 
@@ -45,22 +47,28 @@ namespace NugetPacketAnalyzer
                 //    .OrderBy(x => x.Item1)
                 //    .ToList();
 
+                var maxVersion = Version.Parse("3.0.0");
+                var minVersion = Version.Parse("3.0.0");
+
                 var listGrouped = list.GroupBy(x => x.Item1).ToList();
 
                 foreach (var elemG in listGrouped)
                 {
                     var elem = elemG.FirstOrDefault();
-                    var lastVersion = await GetLastNugetPackageVersion(elemG.Key, Version.Parse("3.0.0"));
-                    Console.WriteLine($"{elemG.Key} - {elem.Item2} - {lastVersion}");
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    var counter = 0;
-                    foreach (var proj in elemG)
+                    var lastVersion = await GetLastNugetPackageVersion(elemG.Key, Version.Parse(elem.Item2), maxVersion);
+                    if (lastVersion != null)
                     {
-                        Console.WriteLine($"\t{proj.Item3} - {proj.Item2}");
-                        counter++;
-                        Console.ForegroundColor = counter % 2 == 0 ? ConsoleColor.Green : ConsoleColor.DarkGreen;
+                        Console.WriteLine($"{elemG.Key} - {elem.Item2} - {lastVersion}");
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        var counter = 0;
+                        foreach (var proj in elemG)
+                        {
+                            Console.WriteLine($"\t{proj.Item3} - {proj.Item2}");
+                            counter++;
+                            Console.ForegroundColor = counter % 2 == 0 ? ConsoleColor.Green : ConsoleColor.DarkGreen;
+                        }
+                        Console.ForegroundColor = ConsoleColor.White;
                     }
-                    Console.ForegroundColor = ConsoleColor.White;
                 }
 
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
@@ -81,15 +89,19 @@ namespace NugetPacketAnalyzer
             }
         }
 
-        private async Task<string> GetLastNugetPackageVersion(string packageName, Version version)
+        private async Task<string> GetLastNugetPackageVersion(string packageName, Version minVersion, Version maxVersion)
         {
             IEnumerable<IPackageSearchMetadata> packageMetadata = await _packageMetadataResource.GetMetadataAsync(packageName, includePrerelease: false, includeUnlisted: false, new SourceCacheContext(), NullLogger.Instance, CancellationToken.None);
 
             var lastVersion = packageMetadata.OrderByDescending(x => x.Identity.Version)
-                .FirstOrDefault(x => version == null || x.Identity.Version.Major <= version.Major)?
+                .FirstOrDefault(x =>
+                (minVersion == null || x.Identity.Version.Major >= minVersion.Major)
+                && (maxVersion == null || x.Identity.Version.Major <= maxVersion.Major))?
                 .Identity?.Version?.ToString();
 
-            return lastVersion;
+            if (lastVersion != minVersion.ToString())
+                return lastVersion;
+            else return null;
 
             //foreach (IPackageSearchMetadata metadata in packageMetadata)
             //{
