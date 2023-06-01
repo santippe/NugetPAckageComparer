@@ -35,7 +35,8 @@ namespace NugetPacketAnalyzer
                 foreach (string projFile in projFiles)
                 {
                     var tmpList = GetPackagesInfo(await File.ReadAllTextAsync(projFile),
-                        Path.GetFileNameWithoutExtension(projFile));
+                        Path.GetFileNameWithoutExtension(projFile))
+                        .Where(x => x.Item1?.Contains("icrosoft") ?? false || (x.Item1?.Contains("ystem") ?? false));
                     list.AddRange(tmpList);
                 }
 
@@ -49,13 +50,13 @@ namespace NugetPacketAnalyzer
                 foreach (var elemG in listGrouped)
                 {
                     var elem = elemG.FirstOrDefault();
-                    var lastVersion = await GetLastNugetPackageVersion(elemG.Key);
+                    var lastVersion = await GetLastNugetPackageVersion(elemG.Key, Version.Parse("3.0.0"));
                     Console.WriteLine($"{elemG.Key} - {elem.Item2} - {lastVersion}");
                     Console.ForegroundColor = ConsoleColor.Green;
                     var counter = 0;
                     foreach (var proj in elemG)
                     {
-                        Console.WriteLine($"{proj.Item3} - {proj.Item2}");
+                        Console.WriteLine($"\t{proj.Item3} - {proj.Item2}");
                         counter++;
                         Console.ForegroundColor = counter % 2 == 0 ? ConsoleColor.Green : ConsoleColor.DarkGreen;
                     }
@@ -80,12 +81,12 @@ namespace NugetPacketAnalyzer
             }
         }
 
-        private async Task<string> GetLastNugetPackageVersion(string packageName)
+        private async Task<string> GetLastNugetPackageVersion(string packageName, Version version)
         {
             IEnumerable<IPackageSearchMetadata> packageMetadata = await _packageMetadataResource.GetMetadataAsync(packageName, includePrerelease: false, includeUnlisted: false, new SourceCacheContext(), NullLogger.Instance, CancellationToken.None);
 
             var lastVersion = packageMetadata.OrderByDescending(x => x.Identity.Version)
-                .FirstOrDefault()?
+                .FirstOrDefault(x => version == null || x.Identity.Version.Major <= version.Major)?
                 .Identity?.Version?.ToString();
 
             return lastVersion;
