@@ -25,6 +25,7 @@ namespace NugetPacketAnalyzer
         {
             Console.WriteLine("1.\tType 1 to get upgradable packages to last version of .net core 3.1.xxx");
             Console.WriteLine("2.\tType 2 to get a list of all packages");
+            Console.WriteLine("3.\tType 3 to get a list of all packages with project referral");
             Console.WriteLine("q.\tType q to quit");
 
             var command = Console.ReadLine();
@@ -79,7 +80,7 @@ namespace NugetPacketAnalyzer
                     }
                 }
 
-                if (command == "2")
+                if (command == "2" || command == "3")
                 {
                     foreach (string projFile in projFiles)
                     {
@@ -99,15 +100,18 @@ namespace NugetPacketAnalyzer
                     {
                         var elem = elemG.FirstOrDefault();
                         Console.WriteLine($"{elemG.Key} - {elem.Item2}");
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        var counter = 0;
-                        foreach (var proj in elemG)
+                        if (command == "3")
                         {
-                            Console.WriteLine($"\t{proj.Item3} - {proj.Item2}");
-                            counter++;
-                            Console.ForegroundColor = counter % 2 == 0 ? ConsoleColor.Green : ConsoleColor.DarkGreen;
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            var counter = 0;
+                            foreach (var proj in elemG)
+                            {
+                                Console.WriteLine($"\t{proj.Item3} - {proj.Item2}");
+                                counter++;
+                                Console.ForegroundColor = counter % 2 == 0 ? ConsoleColor.Green : ConsoleColor.DarkGreen;
+                            }
+                            Console.ForegroundColor = ConsoleColor.White;
                         }
-                        Console.ForegroundColor = ConsoleColor.White;
                     }
                 }
 
