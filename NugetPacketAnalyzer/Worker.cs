@@ -23,7 +23,12 @@ namespace NugetPacketAnalyzer
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            //while (!stoppingToken.IsCancellationRequested)
+            Console.WriteLine("1.\tType 1 to get upgradable packages to last version of .net core 3.1.xxx");
+            Console.WriteLine("2.\tType 2 to get a list of all packages");
+            Console.WriteLine("q.\tType q to quit");
+
+            var command = Console.ReadLine();
+            while (command != "q")
             {
                 //readl al files .proj                                
                 string rootDirectory = _conf.GetSection("root").Value;
@@ -33,32 +38,67 @@ namespace NugetPacketAnalyzer
 
                 var list = new List<(string, string, string)>();
 
-                foreach (string projFile in projFiles)
+                if (command == "1")
                 {
-                    var tmpList = GetPackagesInfo(await File.ReadAllTextAsync(projFile),
-                        Path.GetFileNameWithoutExtension(projFile))
-                        .Where(x => (x.Item1?.Contains("icrosoft") ?? false || (x.Item1?.Contains("ystem") ?? false))
-                        );
-                    list.AddRange(tmpList);
+                    foreach (string projFile in projFiles)
+                    {
+                        var tmpList = GetPackagesInfo(await File.ReadAllTextAsync(projFile),
+                            Path.GetFileNameWithoutExtension(projFile))
+                            .Where(x => (x.Item1?.Contains("icrosoft") ?? false || (x.Item1?.Contains("ystem") ?? false))
+                            );
+                        list.AddRange(tmpList);
+                    }
+
+                    //var comparer = new MyEqualityComparer();
+                    //list = list.Distinct(comparer)
+                    //    .OrderBy(x => x.Item1)
+                    //    .ToList();
+
+                    var maxVersion = Version.Parse("3.0.0");
+                    var minVersion = Version.Parse("3.0.0");
+
+                    var listGrouped = list.GroupBy(x => x.Item1).ToList();
+
+                    foreach (var elemG in listGrouped)
+                    {
+                        var elem = elemG.FirstOrDefault();
+                        var lastVersion = await GetLastNugetPackageVersion(elemG.Key, Version.Parse(elem.Item2), maxVersion);
+                        if (lastVersion != null)
+                        {
+                            Console.WriteLine($"{elemG.Key} - {elem.Item2} - {lastVersion}");
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            var counter = 0;
+                            foreach (var proj in elemG)
+                            {
+                                Console.WriteLine($"\t{proj.Item3} - {proj.Item2}");
+                                counter++;
+                                Console.ForegroundColor = counter % 2 == 0 ? ConsoleColor.Green : ConsoleColor.DarkGreen;
+                            }
+                            Console.ForegroundColor = ConsoleColor.White;
+                        }
+                    }
                 }
 
-                //var comparer = new MyEqualityComparer();
-                //list = list.Distinct(comparer)
-                //    .OrderBy(x => x.Item1)
-                //    .ToList();
-
-                var maxVersion = Version.Parse("3.0.0");
-                var minVersion = Version.Parse("3.0.0");
-
-                var listGrouped = list.GroupBy(x => x.Item1).ToList();
-
-                foreach (var elemG in listGrouped)
+                if (command == "2")
                 {
-                    var elem = elemG.FirstOrDefault();
-                    var lastVersion = await GetLastNugetPackageVersion(elemG.Key, Version.Parse(elem.Item2), maxVersion);
-                    if (lastVersion != null)
+                    foreach (string projFile in projFiles)
                     {
-                        Console.WriteLine($"{elemG.Key} - {elem.Item2} - {lastVersion}");
+                        var tmpList = GetPackagesInfo(await File.ReadAllTextAsync(projFile),
+                            Path.GetFileNameWithoutExtension(projFile));
+                        list.AddRange(tmpList);
+                    }
+
+                    //var comparer = new MyEqualityComparer();
+                    //list = list.Distinct(comparer)
+                    //    .OrderBy(x => x.Item1)
+                    //    .ToList();
+
+                    var listGrouped = list.GroupBy(x => x.Item1).ToList();
+
+                    foreach (var elemG in listGrouped)
+                    {
+                        var elem = elemG.FirstOrDefault();
+                        Console.WriteLine($"{elemG.Key} - {elem.Item2}");
                         Console.ForegroundColor = ConsoleColor.Green;
                         var counter = 0;
                         foreach (var proj in elemG)
@@ -72,8 +112,16 @@ namespace NugetPacketAnalyzer
                 }
 
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-                await Task.Delay(1000, stoppingToken);
+
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine("1.\tType 1 to get upgradable packages to last version of .net core 3.1.xxx");
+                Console.WriteLine("2.\tType 2 to get a list of all packages");
+                Console.WriteLine("q.\tType q to quit");
+                command = Console.ReadLine();
+                //await Task.Delay(1000, stoppingToken);
             }
+            await Program.Host.StopAsync();
         }
 
         private IEnumerable<(string, string, string)> GetPackagesInfo(string xml, string projName)
