@@ -11,6 +11,7 @@ namespace NugetPacketAnalyzer
                 .ConfigureServices(services =>
                 {
                     services.AddHostedService<Worker>();
+                    services.AddSingleton(new NugetService());
                 })
                 .Build();
 
