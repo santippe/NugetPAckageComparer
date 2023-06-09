@@ -24,9 +24,9 @@ namespace NugetPacketAnalyzer
         private string ConsoleMenuType()
         {
             Console.WriteLine("1.\tType 1 to get upgradable packages to last version of .net core 3.1.xxx");
-            Console.WriteLine("2.\tType 1 to get all upgradable packages to last version");
-            Console.WriteLine("3.\tType 2 to get a list of all packages");
-            Console.WriteLine("4.\tType 3 to get a list of all packages with project referral");
+            Console.WriteLine("2.\tType 2 to get all upgradable packages to last version");
+            Console.WriteLine("3.\tType 3 to get a list of all packages");
+            Console.WriteLine("4.\tType 4 to get a list of all packages with project referral");
             Console.WriteLine("q.\tType q to quit");
 
             var command = Console.ReadLine();
